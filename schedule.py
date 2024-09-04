@@ -3,13 +3,12 @@ import sqlite3
 import time
 import requests
 import os
-import dotenv from load_dotenv
+from dotenv import load_dotenv
 
 load_dotenv()
 
 TOKEN = os.getenv('TOKEN')
-CHAT_ID = os.getenv('CHAT_ID')
-
+CHAT_ID = int(os.getenv('CHAT_ID'))
 conn = sqlite3.connect('mydatabase.db')
 cursor = conn.cursor()
 
@@ -41,7 +40,7 @@ def scheduler():
                 #else:
                     #print("Unavailable")
 
-            time.sleep(30)  
+            time.sleep(55)  
 
         except Exception as e:
             print(f"Error in scheduler: {e}")
