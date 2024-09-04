@@ -44,10 +44,11 @@ conn.commit()
 def is_owner(user):
     return user == OWNER
 
-def is_authorized(user):
+def is_authorized(username):
     cursor.execute('SELECT * from users')
     users = cursor.fetchall()
-    return user in users
+    user_list = ' '.join([f"@{user[1]}" for user in users])
+    return username in user_list
 
 def user_exists(user_name):
     cursor.execute('SELECT * FROM users WHERE username = ?', (user_name,))
