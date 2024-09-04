@@ -86,6 +86,8 @@ async def remove_member(update, context):
             await update.message.reply_text(f'Dữ liệu nhập vào rỗng')
     else:
         await update.message.reply_text("You are not authorized to use this bot.")
+    context.user_data.clear()
+    return ConversationHandler.END
 
 async def add_member(update, context):
     username = update.message.from_user.username 
@@ -102,6 +104,8 @@ async def add_member(update, context):
     else:
         # Notify unauthorized user
         await update.message.reply_text("You are not authorized to use this bot.")
+    context.user_data.clear()
+    return ConversationHandler.END
 
 async def show_member(update, context):
     username = update.message.from_user.username
@@ -135,7 +139,6 @@ async def modify_member(update: Update, context: CallbackContext) -> int:
             return ConversationHandler.END
         else:
             await update.message.reply_text("Lựa chọn không phù hợp. Hay điền lựa chọn phù hợp hoặc q để kết thúc.")
-        return ConversationHandler.END
     else:
         # Notify unauthorized user
         await update.message.reply_text("You are not authorized to use this bot.")
@@ -341,7 +344,7 @@ async def switch_job(update: Update, context: CallbackContext):
     return ConversationHandler.END
 
 async def help (update,context):
-    await update.message.reply_text("Bot Nhắc việc:\n/help: Thông tin các lệnh\n/all: tag all member\n/show_member: hiển thị danh sách thành viên\n/show_job: hiển thị danh sách công việc")
+    await update.message.reply_text("Bot Nhắc việc:\n/help: Thông tin các lệnh\n/all: tag all member\n/member: hiển thị danh sách thành viên\n/job: hiển thị danh sách công việc")
 
 MODIFY_MEMBER, ADD_MEMBER, REMOVE_MEMBER, MODIFY_JOB, ADD_JOB, REMOVE_JOB, SWITCH_JOB = range(7)
 
@@ -358,7 +361,7 @@ def main() -> None:
     not_command_filter = NotCommandFilter()
 
     member_handler = ConversationHandler(
-        entry_points=[CommandHandler('members', show_member)],
+        entry_points=[CommandHandler('member', show_member)],
         states={
             MODIFY_MEMBER: [MessageHandler(not_command_filter, modify_member)],
             ADD_MEMBER: [MessageHandler(not_command_filter, add_member)],
@@ -368,7 +371,7 @@ def main() -> None:
     )
 
     job_handler = ConversationHandler(
-        entry_points=[CommandHandler('jobs', show_job)],
+        entry_points=[CommandHandler('job', show_job)],
         states={
             MODIFY_JOB: [MessageHandler(not_command_filter, modify_job)],
             ADD_JOB: [MessageHandler(not_command_filter, add_job)],
