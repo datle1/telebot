@@ -15,6 +15,7 @@ logging.basicConfig(
 )
 
 TOKEN = os.getenv('TOKEN')
+OWNER = os.getenv('OWNER')
 
 conn = sqlite3.connect('mydatabase.db')
 cursor = conn.cursor()
@@ -39,9 +40,6 @@ cursor.execute('''
 ''')
 
 conn.commit()
-
-# Get user from db
-OWNER = 'datlq3'
 
 def is_owner(user):
     return user == OWNER
