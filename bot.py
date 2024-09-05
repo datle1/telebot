@@ -280,23 +280,18 @@ async def add_job(update: Update, context: CallbackContext) -> int:
             await update.message.reply_text("Thời gian không hợp lệ. Nhập lại thời gian (HH:MM,HH:MM,...):")
     
     elif step == 'group':
-        group_input = update.message.text
-        context.user_data['group'] = group_input
-        context.user_data['step'] = 'done'
+        groups = update.message.text
 
-    elif step == 'done':
         # Process the collected data and insert into the database
         days = context.user_data.get('days', [])
         message = context.user_data.get('message', '')
         times = context.user_data.get('times', [])
-        groups = context.user_data.get('groups', [])
 
         days_str = ','.join(days)
         times_str = ','.join(times)
-        groups_str = ','.join(groups)
-        # print(f"{days},{message},{times}")
+
         cursor.execute('INSERT INTO job (days, message, times, status, groups) VALUES (?, ?, ?, ?, ?)',
-                        (days_str, message, times_str, True, groups_str))
+                        (days_str, message, times_str, True, groups))
         conn.commit()
 
         # Clear user_data for the next conversation
