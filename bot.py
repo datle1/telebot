@@ -201,7 +201,7 @@ async def show_job(update: Update, context: CallbackContext) -> int:
     status = ['Tắt','Bật']
 
     if jobs and len(jobs[0]) >= 6:
-        job_list = '\n'.join([f"ID: {job[0]}| Ngày: {job[1]}| Công việc: {job[2]}| Thời gian: {job[3]}| Trạng thái: {status[job[4]]}| Nhóm: {job[5]}" for job in jobs])
+        job_list = '\n'.join([f"---\nID: {job[0]}| Ngày: {job[1]}| Công việc: {job[2]}| Thời gian: {job[3]}| Trạng thái: {status[job[4]]}| Nhóm: {job[5]}" for job in jobs])
         await update.message.reply_text(f"Danh sách nhắc việc:\n{job_list}")
     else:
         await update.message.reply_text("Danh sách rỗng")
