@@ -78,7 +78,8 @@ def remove(user_name_list):
 async def remove_member(update, context):
     username = update.message.from_user.username
     if is_owner(username):
-        user_name_list = update.message.text
+        user_input = update.message.text
+        user_name_list = user_input.split(',')
         if len(user_name_list) > 0:    
             remove(user_name_list)
             await update.message.reply_text(f'Xóa người dùng thành công')
@@ -92,7 +93,8 @@ async def remove_member(update, context):
 async def add_member(update, context):
     username = update.message.from_user.username 
     if is_owner(username):
-        user_name_list = update.message.text
+        user_input = update.message.text
+        user_name_list = user_input.split(',')
         if len(user_name_list) > 0:
             res , existed_users = insert(user_name_list)
             if not res:
@@ -384,4 +386,5 @@ def main() -> None:
     application.run_polling()
     
 
-main()
+if __name__ == "__main__":
+    main()
