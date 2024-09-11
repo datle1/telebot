@@ -45,10 +45,7 @@ def is_owner(user):
     return user == OWNER
 
 def is_authorized(username):
-    cursor.execute('SELECT * from users')
-    users = cursor.fetchall()
-    user_list = ' '.join([f"@{user[1]}" for user in users])
-    return username in user_list
+    return user_exists(username)
 
 def user_exists(user_name):
     cursor.execute('SELECT * FROM users WHERE username = ?', (user_name,))
@@ -92,7 +89,7 @@ async def remove_member(update, context):
 async def add_member(update, context):
     username = update.message.from_user.username 
     if is_owner(username):
-        user_name_list = update.message.text
+        user_name_list = update.message.text.split(',')
         if len(user_name_list) > 0:
             res , existed_users = insert(user_name_list)
             if not res:
