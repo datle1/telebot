@@ -78,8 +78,7 @@ def remove(user_name_list):
 async def remove_member(update, context):
     username = update.message.from_user.username
     if is_owner(username):
-        user_input = update.message.text
-        user_name_list = user_input.split(',')
+        user_name_list = update.message.text
         if len(user_name_list) > 0:    
             remove(user_name_list)
             await update.message.reply_text(f'Xóa người dùng thành công')
@@ -93,8 +92,7 @@ async def remove_member(update, context):
 async def add_member(update, context):
     username = update.message.from_user.username 
     if is_owner(username):
-        user_input = update.message.text
-        user_name_list = user_input.split(',')
+        user_name_list = update.message.text
         if len(user_name_list) > 0:
             res , existed_users = insert(user_name_list)
             if not res:
@@ -120,11 +118,12 @@ async def show_member(update, context):
             await update.message.reply_text(f'Danh sách người dùng:\n{user_list}')
         else:
             await update.message.reply_text('Danh sách người dùng rỗng.')
+        await update.message.reply_text("Bạn có muốn thực hiện thay đổi member ?\n1.Thêm mới\n2.Xóa bỏ\nq.Thoát")
+        return MODIFY_MEMBER
     else:
         # Notify unauthorized user
         await update.message.reply_text("You are not authorized to use this bot.")
-    await update.message.reply_text("Bạn có muốn thực hiện thay đổi member ?\n1.Thêm mới\n2.Xóa bỏ\nq.Thoát")
-    return MODIFY_MEMBER
+        return ConversationHandler.END
 
 async def modify_member(update: Update, context: CallbackContext) -> int:
     username = update.message.from_user.username
@@ -144,6 +143,7 @@ async def modify_member(update: Update, context: CallbackContext) -> int:
     else:
         # Notify unauthorized user
         await update.message.reply_text("You are not authorized to use this bot.")
+        return ConversationHandler.END
 
 async def shout(update, context):
     username = update.message.from_user.username
@@ -197,19 +197,25 @@ def validate_time(time):
         return False
 
 async def show_job(update: Update, context: CallbackContext) -> int:
-    # Logic to fetch and display jobs
-    cursor.execute('SELECT * from job')
-    jobs = cursor.fetchall()
-    status = ['Tắt','Bật']
+    username = update.message.from_user.username
+    if is_owner(username):
+        # Logic to fetch and display jobs
+        cursor.execute('SELECT * from job')
+        jobs = cursor.fetchall()
+        status = ['Tắt','Bật']
 
-    if jobs and len(jobs[0]) >= 6:
-        job_list = '\n'.join([f"---\nID: {job[0]}| Ngày: {job[1]}| Công việc: {job[2]}| Thời gian: {job[3]}| Trạng thái: {status[job[4]]}| Nhóm: {job[5]}" for job in jobs])
-        await update.message.reply_text(f"Danh sách nhắc việc:\n{job_list}")
+        if jobs and len(jobs[0]) >= 6:
+            job_list = '\n'.join([f"---\nID: {job[0]}\n Ngày: {job[1]}\n Công việc: {job[2]}\n Thời gian: {job[3]}\n Trạng thái: {status[job[4]]}\n Nhóm: {job[5]}" for job in jobs])
+            await update.message.reply_text(f"Danh sách nhắc việc:\n{job_list}")
+        else:
+            await update.message.reply_text("Danh sách rỗng")
+        # ...
+        await update.message.reply_text("Bạn có muốn thực hiện thay đổi các công việc ?\n1.Thêm mới\n2.Xóa bỏ\n3.Tắt/Bật lịch\nq.Thoát")
+        return MODIFY_JOB
     else:
-        await update.message.reply_text("Danh sách rỗng")
-    # ...
-    await update.message.reply_text("Bạn có muốn thực hiện thay đổi các công việc ?\n1.Thêm mới\n2.Xóa bỏ\n3.Tắt/Bật lịch\nq.Thoát")
-    return MODIFY_JOB
+        # Notify unauthorized user
+        await update.message.reply_text("You are not authorized to use this bot.")
+        return ConversationHandler.END
 
 async def modify_job(update: Update, context: CallbackContext) -> int:
     username = update.message.from_user.username
@@ -233,11 +239,10 @@ async def modify_job(update: Update, context: CallbackContext) -> int:
             return ConversationHandler.END
         else:
             await update.message.reply_text("Lựa chọn không phù hợp. Hay điền lựa chọn phù hợp hoặc q để kết thúc.")
-
-        return ConversationHandler.END
     else:
         # Notify unauthorized user
         await update.message.reply_text("You are not authorized to use this bot.")
+        return ConversationHandler.END     
 
 async def cancel(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text("Hủy Hành động.")
@@ -349,7 +354,7 @@ class NotCommandFilter(filters.BaseFilter):
     def filter(self, message: Update) -> bool:
         return message.text and not message.text.startswith('/')
 
-def main() -> None:
+def main():
     application = ApplicationBuilder().token(TOKEN).build()
 
     shout_handler = CommandHandler("all",shout)
@@ -384,7 +389,6 @@ def main() -> None:
     application.add_handler(shout_handler)
     
     application.run_polling()
-    
 
 if __name__ == "__main__":
     main()

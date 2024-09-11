@@ -11,7 +11,7 @@ TOKEN = os.getenv('TOKEN')
 conn = sqlite3.connect('mydatabase.db')
 cursor = conn.cursor()
 
-def scheduler():
+def main():
     while True:
         try:
             current_datetime = datetime.datetime.now()
@@ -50,8 +50,5 @@ def scheduler():
         except Exception as e:
             print(f"Error in scheduler: {e}")
 
-
-def main():
-    scheduler()
-
-main()
+if __name__ == "__main__":
+    main()
