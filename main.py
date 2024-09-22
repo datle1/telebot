@@ -1,11 +1,9 @@
 import logging
-from datetime import datetime, timedelta, time
+from storage.storage_factory import StorageFactory
 from telegram import Update
 from telegram.ext import  CommandHandler, CallbackContext, ApplicationBuilder, ConversationHandler, MessageHandler, filters
-import sqlite3
 import os
 from dotenv import load_dotenv
-import re
 
 load_dotenv()
 
@@ -17,51 +15,24 @@ logging.basicConfig(
 TOKEN = os.getenv('TOKEN')
 OWNER = os.getenv('OWNER')
 
-conn = sqlite3.connect('mydatabase.db')
-cursor = conn.cursor()
-
-# Create a table if not exists
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        username TEXT
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS job (
-        id INTEGER PRIMARY KEY,
-        days TEXT,
-        message TEXT,
-        times TEXT,
-        status BOOL,
-        groups TEXT
-    )
-''')
-
-conn.commit()
+storage = StorageFactory.get_storage('sqlite')
 
 def is_owner(user):
     return user == OWNER
 
 def is_authorized(username):
-    return user_exists(username)
+    return user_exist(username)
 
-def user_exists(user_name):
-    cursor.execute('SELECT * FROM users WHERE username = ?', (user_name,))
-    if cursor.fetchone() is not None:
-        return True
-    else: 
-        return False
+def user_exist(user_name):
+    storage.user_exist(user_name)
 
 def insert(user_name_list):
     existed_users = []
     for user_name in user_name_list: 
-        if user_exists(user_name):
+        if user_exist(user_name):
             existed_users.append(user_name)
         else:
-            cursor.execute('INSERT INTO users (username) VALUES (?)', (user_name,))
-            conn.commit()
+            storage.insert_user(user_name)
     if len(existed_users) > 0:
         return False, existed_users
     else:
@@ -69,8 +40,7 @@ def insert(user_name_list):
     
 def remove(user_name_list):
     for user_name in user_name_list:
-        cursor.execute('DELETE FROM users WHERE username = ?', (user_name,))
-        conn.commit()
+        storage.delete_user(user_name)
 
 async def remove_member(update, context):
     username = update.message.from_user.username
@@ -107,9 +77,7 @@ async def add_member(update, context):
 async def show_member(update, context):
     username = update.message.from_user.username
     if is_owner(username):
-        cursor.execute('SELECT * from users')
-        users = cursor.fetchall()
-
+        users = storage.get_all_users()
         if users:
             user_list = '\n'.join([f"{user[1]}" for user in users])
             await update.message.reply_text(f'Danh sách người dùng:\n{user_list}')
@@ -142,11 +110,10 @@ async def modify_member(update: Update, context: CallbackContext) -> int:
         await update.message.reply_text("You are not authorized to use this bot.")
         return ConversationHandler.END
 
-async def shout(update, context):
+async def tag_all(update, context):
     username = update.message.from_user.username
     if is_authorized(username):
-        cursor.execute('SELECT * from users')
-        users = cursor.fetchall()
+        users = storage.get_all_users()
         user_list = ' '.join([f"@{user[1]}" for user in users])
         await update.message.reply_text(f'{user_list}')
     else:
@@ -197,8 +164,7 @@ async def show_job(update: Update, context: CallbackContext) -> int:
     username = update.message.from_user.username
     if is_owner(username):
         # Logic to fetch and display jobs
-        cursor.execute('SELECT * from job')
-        jobs = cursor.fetchall()
+        jobs = storage.get_all_jobs()
         status = ['Tắt','Bật']
 
         if jobs and len(jobs[0]) >= 6:
@@ -294,9 +260,7 @@ async def add_job(update: Update, context: CallbackContext) -> int:
         days_str = ','.join(days)
         times_str = ','.join(times)
 
-        cursor.execute('INSERT INTO job (days, message, times, status, groups) VALUES (?, ?, ?, ?, ?)',
-                        (days_str, message, times_str, True, groups))
-        conn.commit()
+        storage.insert_job(days_str, message, times_str, groups)
 
         # Clear user_data for the next conversation
         context.user_data.clear()
@@ -313,8 +277,7 @@ async def remove_job(update: Update, context: CallbackContext):
         IDs = (ID.strip() for ID in input_ID.split(','))
         for ID in IDs:
             if validate_id(ID):
-                cursor.execute('DELETE FROM job WHERE id = ?', (ID,))
-                conn.commit()
+                storage.delete_job(ID)
                 await update.message.reply_text(f"Việc có ID {ID} đã được xóa.")
             else:
                 await update.message.reply_text(f"ID {ID} không hợp lệ.")
@@ -331,30 +294,29 @@ async def switch_job(update: Update, context: CallbackContext):
         IDs = (ID.strip() for ID in input_ID.split(','))
         for ID in IDs:
             if validate_id(ID):
-                cursor.execute('SELECT status FROM job WHERE id = ?', (ID,))
-                current_status = cursor.fetchone()
+                current_status = storage.get_job_status(ID)
                 new_status = 1 if current_status[0] == 0 else 0
 
                 # Update the 'status' column for a specific ID
-                cursor.execute('UPDATE job SET status = ? WHERE id = ?', (new_status, ID,))
-                conn.commit()
+                storage.switch(new_status, ID)
             await update.message.reply_text(f"Đổi trạng thái lịch số {ID} thành công")
         context.user_data.clear()
     return ConversationHandler.END
 
-async def help (update,context):
+async def help(update,context):
     await update.message.reply_text("Bot Nhắc việc:\n/help: Thông tin các lệnh\n/all: tag all member\n/member: hiển thị danh sách thành viên\n/job: hiển thị danh sách công việc")
-
-MODIFY_MEMBER, ADD_MEMBER, REMOVE_MEMBER, MODIFY_JOB, ADD_JOB, REMOVE_JOB, SWITCH_JOB = range(7)
 
 class NotCommandFilter(filters.BaseFilter):
     def filter(self, message: Update) -> bool:
         return message.text and not message.text.startswith('/')
+    
+MODIFY_MEMBER, ADD_MEMBER, REMOVE_MEMBER, MODIFY_JOB, ADD_JOB, REMOVE_JOB, SWITCH_JOB = range(7)
 
 def main():
+
     application = ApplicationBuilder().token(TOKEN).build()
 
-    shout_handler = CommandHandler("all",shout)
+    shout_handler = CommandHandler("all",tag_all)
     help_hanlder = CommandHandler("help",help)
 
     not_command_filter = NotCommandFilter()
