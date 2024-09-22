@@ -7,7 +7,7 @@ class StorageFactory():
     def get_storage(type='sqlite'):
         storage_type = {
             "sqlite": SqliteStorage,
-            # "s3": S3Storage
+            "s3": S3Storage
         }
 
         return storage_type[type]()

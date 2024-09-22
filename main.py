@@ -24,7 +24,7 @@ def is_authorized(username):
     return user_exist(username)
 
 def user_exist(user_name):
-    storage.user_exist(user_name)
+    return storage.user_exist(user_name)
 
 def insert(user_name_list):
     existed_users = []

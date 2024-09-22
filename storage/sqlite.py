@@ -2,21 +2,22 @@
 import sqlite3
 from storage.storage import Storage
 
+
 DATABASE_PATH = 'mydatabase.db'
 
 class SqliteStorage(Storage):
     
     def __init__(self):
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
+        self.conn = sqlite3.connect(DATABASE_PATH)
+        self.cursor = self.conn.cursor()
         # Create a table if not exists
-        cursor.execute('''
+        self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY,
                 username TEXT
             )
         ''')
-        cursor.execute('''
+        self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS job (
                 id INTEGER PRIMARY KEY,
                 days TEXT,
@@ -26,13 +27,13 @@ class SqliteStorage(Storage):
                 groups TEXT
             )
         ''')
-        conn.commit()
+        self.conn.commit()
 
     def user_exist(self, user_name):
         self.cursor.execute('SELECT * FROM users WHERE username = ?', (user_name,))
         if self.cursor.fetchone() is not None:
             return True
-        else: 
+        else:
             return False
         
     def insert_user(self, user_name):
