@@ -20,9 +20,6 @@ storage = StorageFactory.get_storage('sqlite')
 def is_owner(user):
     return user == OWNER
 
-def is_authorized(username):
-    return user_exist(username)
-
 def user_exist(user_name):
     return storage.user_exist(user_name)
 
@@ -111,13 +108,9 @@ async def modify_member(update: Update, context: CallbackContext) -> int:
         return ConversationHandler.END
 
 async def tag_all(update, context):
-    username = update.message.from_user.username
-    if is_authorized(username):
-        users = storage.get_all_users()
-        user_list = ' '.join([f"@{user[1]}" for user in users])
-        await update.message.reply_text(f'{user_list}')
-    else:
-        await update.message.reply_text("You are not authorized to use this bot.")
+    users = storage.get_all_users()
+    user_list = ' '.join([f"@{user[1]}" for user in users])
+    await update.message.reply_text(f'{user_list}')
 
 def validate_day(day):
     try:
@@ -213,94 +206,107 @@ async def cancel(update: Update, context: CallbackContext) -> int:
 
 async def add_job(update: Update, context: CallbackContext) -> int:
     step = context.user_data.get('step', None)
+    username = update.message.from_user.username
+    if is_owner(username):
+        if step == 'day':
+            day_input = update.message.text
+            # Split the input string into a list of days
+            days = [day.strip() for day in day_input.split(',')]
 
-    if step == 'day':
-        day_input = update.message.text
-        # Split the input string into a list of days
-        days = [day.strip() for day in day_input.split(',')]
+            if all(validate_day(day) for day in days):
+                if 'days' not in context.user_data:
+                    context.user_data['days'] = []
+                context.user_data['days'].extend(days)
+                await update.message.reply_text(f"Nhập thông tin về công việc bạn muốn thêm:")
+                context.user_data['step'] = 'message'
+            else:
+                await update.message.reply_text("Ngày không hợp lệ. Nhập lại ngày (1-31 hoặc monday-sunday):")
 
-        if all(validate_day(day) for day in days):
-            if 'days' not in context.user_data:
-                context.user_data['days'] = []
-            context.user_data['days'].extend(days)
-            await update.message.reply_text(f"Nhập thông tin về công việc bạn muốn thêm:")
-            context.user_data['step'] = 'message'
-        else:
-            await update.message.reply_text("Ngày không hợp lệ. Nhập lại ngày (1-31 hoặc monday-sunday):")
+        elif step == 'message':
+            message_input = update.message.text
+            # if validate_message(message_input):
+            context.user_data['message'] = message_input
+            await update.message.reply_text(f"Nhập thời gian (HH:MM,HH:MM,...):")
+            context.user_data['step'] = 'time'
 
-    elif step == 'message':
-        message_input = update.message.text
-        # if validate_message(message_input):
-        context.user_data['message'] = message_input
-        await update.message.reply_text(f"Nhập thời gian (HH:MM,HH:MM,...):")
-        context.user_data['step'] = 'time'
+        elif step == 'time':
+            time_input = update.message.text
+            # Split the input string into a list of times
+            times = [time.strip() for time in time_input.split(',')]
 
-    elif step == 'time':
-        time_input = update.message.text
-        # Split the input string into a list of times
-        times = [time.strip() for time in time_input.split(',')]
+            if all(validate_time(time) for time in times):
+                if 'times' not in context.user_data:
+                    context.user_data['times'] = []
+                context.user_data['times'].extend(times)
+                context.user_data['step'] = 'group'
+                await update.message.reply_text(f"Nhập danh sách nhóm (CHAT_ID_1,CHAT_ID_2,...):")
+            else:
+                await update.message.reply_text("Thời gian không hợp lệ. Nhập lại thời gian (HH:MM,HH:MM,...):")
+        
+        elif step == 'group':
+            groups = update.message.text
 
-        if all(validate_time(time) for time in times):
-            if 'times' not in context.user_data:
-                context.user_data['times'] = []
-            context.user_data['times'].extend(times)
-            context.user_data['step'] = 'group'
-            await update.message.reply_text(f"Nhập danh sách nhóm (CHAT_ID_1,CHAT_ID_2,...):")
-        else:
-            await update.message.reply_text("Thời gian không hợp lệ. Nhập lại thời gian (HH:MM,HH:MM,...):")
-    
-    elif step == 'group':
-        groups = update.message.text
+            # Process the collected data and insert into the database
+            days = context.user_data.get('days', [])
+            message = context.user_data.get('message', '')
+            times = context.user_data.get('times', [])
 
-        # Process the collected data and insert into the database
-        days = context.user_data.get('days', [])
-        message = context.user_data.get('message', '')
-        times = context.user_data.get('times', [])
+            days_str = ','.join(days)
+            times_str = ','.join(times)
 
-        days_str = ','.join(days)
-        times_str = ','.join(times)
+            storage.insert_job(days_str, message, times_str, groups)
 
-        storage.insert_job(days_str, message, times_str, groups)
+            # Clear user_data for the next conversation
+            context.user_data.clear()
 
-        # Clear user_data for the next conversation
-        context.user_data.clear()
-
-        await update.message.reply_text("Công việc đã được thêm thành công.")
+            await update.message.reply_text("Công việc đã được thêm thành công.")
+            return ConversationHandler.END
+    else:
+        # Notify unauthorized user
+        await update.message.reply_text("You are not authorized to use this bot.")
         return ConversationHandler.END
-
     return ADD_JOB
 
 async def remove_job(update: Update, context: CallbackContext):
     step = context.user_data.get('step', None)
-    if step == 'remove':
-        input_ID = update.message.text
-        IDs = (ID.strip() for ID in input_ID.split(','))
-        for ID in IDs:
-            if validate_id(ID):
-                storage.delete_job(ID)
-                await update.message.reply_text(f"Việc có ID {ID} đã được xóa.")
-            else:
-                await update.message.reply_text(f"ID {ID} không hợp lệ.")
-        
-        # Clear user_data for the next conversation
-        context.user_data.clear()
-
+    username = update.message.from_user.username
+    if is_owner(username):
+        if step == 'remove':
+            input_ID = update.message.text
+            IDs = (ID.strip() for ID in input_ID.split(','))
+            for ID in IDs:
+                if validate_id(ID):
+                    storage.delete_job(ID)
+                    await update.message.reply_text(f"Việc có ID {ID} đã được xóa.")
+                else:
+                    await update.message.reply_text(f"ID {ID} không hợp lệ.")
+            
+            # Clear user_data for the next conversation
+            context.user_data.clear()
+    else:
+        # Notify unauthorized user
+        await update.message.reply_text("You are not authorized to use this bot.")
     return ConversationHandler.END
 
 async def switch_job(update: Update, context: CallbackContext):
     step = context.user_data.get('step', None)
-    if step == 'switch':
-        input_ID = update.message.text
-        IDs = (ID.strip() for ID in input_ID.split(','))
-        for ID in IDs:
-            if validate_id(ID):
-                current_status = storage.get_job_status(ID)
-                new_status = 1 if current_status[0] == 0 else 0
+    username = update.message.from_user.username
+    if is_owner(username):
+        if step == 'switch':
+            input_ID = update.message.text
+            IDs = (ID.strip() for ID in input_ID.split(','))
+            for ID in IDs:
+                if validate_id(ID):
+                    current_status = storage.get_job_status(ID)
+                    new_status = 1 if current_status[0] == 0 else 0
 
-                # Update the 'status' column for a specific ID
-                storage.switch(new_status, ID)
-            await update.message.reply_text(f"Đổi trạng thái lịch số {ID} thành công")
-        context.user_data.clear()
+                    # Update the 'status' column for a specific ID
+                    storage.switch(new_status, ID)
+                await update.message.reply_text(f"Đổi trạng thái lịch số {ID} thành công")
+            context.user_data.clear()
+    else:
+        # Notify unauthorized user
+        await update.message.reply_text("You are not authorized to use this bot.")
     return ConversationHandler.END
 
 async def help(update,context):
