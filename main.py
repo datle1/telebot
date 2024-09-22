@@ -3,19 +3,16 @@ from storage.storage_factory import StorageFactory
 from telegram import Update
 from telegram.ext import  CommandHandler, CallbackContext, ApplicationBuilder, ConversationHandler, MessageHandler, filters
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.ERROR
 )
 
 TOKEN = os.getenv('TOKEN')
 OWNER = os.getenv('OWNER')
 
-storage = StorageFactory.get_storage('sqlite')
+storage = StorageFactory.get_storage('s3')
 
 def is_owner(user):
     return user == OWNER
@@ -42,7 +39,7 @@ def remove(user_name_list):
 async def remove_member(update, context):
     username = update.message.from_user.username
     if is_owner(username):
-        user_name_list = update.message.text
+        user_name_list = update.message.text.split(',')
         if len(user_name_list) > 0:    
             remove(user_name_list)
             await update.message.reply_text(f'Xóa người dùng thành công')
@@ -76,7 +73,7 @@ async def show_member(update, context):
     if is_owner(username):
         users = storage.get_all_users()
         if users:
-            user_list = '\n'.join([f"{user[1]}" for user in users])
+            user_list = ' '.join([f"{user}" for user in users])
             await update.message.reply_text(f'Danh sách người dùng:\n{user_list}')
         else:
             await update.message.reply_text('Danh sách người dùng rỗng.')
@@ -109,7 +106,7 @@ async def modify_member(update: Update, context: CallbackContext) -> int:
 
 async def tag_all(update, context):
     users = storage.get_all_users()
-    user_list = ' '.join([f"@{user[1]}" for user in users])
+    user_list = ' '.join([f"@{user}" for user in users])
     await update.message.reply_text(f'{user_list}')
 
 def validate_day(day):

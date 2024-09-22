@@ -2,3 +2,4 @@ python-telegram-bot
 telegram
 python-dotenv
 requests
+boto3
