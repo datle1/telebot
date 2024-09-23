@@ -4,7 +4,6 @@ import boto3
 from io import BytesIO
 import os
 
-S3_URL = 's3'
 BUCKET_NAME = 'telebucket'
 USER_FILE = 'users.txt'
 JOB_FILE = 'jobs.txt'
@@ -20,7 +19,7 @@ class S3Storage(Storage):
                 aws_secret_access_key=AWS_SERVER_SECRET_KEY,
                 region_name=AWS_SERVER_REGION
             )
-        self.s3_client = session.client(S3_URL)
+        self.s3_client = session.client('s3')
         self.users = self.get_all_users()
         self.jobs = self.get_all_jobs()
 
@@ -56,14 +55,19 @@ class S3Storage(Storage):
         return jobs
     
     def insert_job(self, days_str, message, times_str, groups):
-        self.jobs.append([days_str, message, times_str, True, groups])
+        self.jobs.append("|".join(days_str, message, times_str, True, groups))
         self.save_jobs()
 
     def delete_job(self, id):
-        pass
+        self.jobs.pop(id)
+        self.save_jobs()
 
     def get_job_status(self, id):
-        pass
+        job = self.jobs.__getitem__(id).split("|")
+        return bool(job[3])
 
     def switch_job(self, new_status, id):
-        pass
+        job = self.jobs.__getitem__(id).split("|")
+        job[3] = new_status
+        self.jobs.__setitem__(id, "|".join(job))
+        self.save_jobs()
