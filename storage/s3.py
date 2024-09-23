@@ -24,11 +24,11 @@ class S3Storage(Storage):
         self.jobs = self.get_all_jobs()
 
     def save_users(self):
-        fo = io.BytesIO(b"\n".join([bytes(item, 'utf-8') for item in self.users]))
+        fo = io.BytesIO(b'\n'.join([bytes(item, 'utf-8') for item in self.users]))
         self.s3_client.upload_fileobj(fo, BUCKET_NAME, USER_FILE)
 
     def save_jobs(self):
-        fo = io.BytesIO(b"\n".join([bytes(item, 'utf-8') for item in self.jobs]))
+        fo = io.BytesIO(b'\n'.join([bytes(item, 'utf-8') for item in self.jobs]))
         self.s3_client.upload_fileobj(fo, BUCKET_NAME, JOB_FILE)
 
     def user_exist(self, user_name):
@@ -45,17 +45,20 @@ class S3Storage(Storage):
     def get_all_users(self):
         f = BytesIO()
         self.s3_client.download_fileobj(BUCKET_NAME, USER_FILE, f)
-        users = f.getvalue().decode("utf-8").split('\n')
+        users = f.getvalue().decode('utf-8').split('\n')
         return users
 
     def get_all_jobs(self):
         f = BytesIO()
         self.s3_client.download_fileobj(BUCKET_NAME, JOB_FILE, f)
-        jobs = f.getvalue().decode("utf-8").split('\n')
-        return jobs
+        jobs = f.getvalue().decode('utf-8').split('\n')
+        result = []
+        for job in jobs:
+            result.append(job.split('|'))
+        return result
     
     def insert_job(self, days_str, message, times_str, groups):
-        self.jobs.append("|".join(days_str, message, times_str, True, groups))
+        self.jobs.append('|'.join(days_str, message, times_str, True, groups))
         self.save_jobs()
 
     def delete_job(self, id):
@@ -63,11 +66,11 @@ class S3Storage(Storage):
         self.save_jobs()
 
     def get_job_status(self, id):
-        job = self.jobs.__getitem__(id).split("|")
+        job = self.jobs.__getitem__(id).split('|')
         return bool(job[3])
 
     def switch_job(self, new_status, id):
-        job = self.jobs.__getitem__(id).split("|")
+        job = self.jobs.__getitem__(id).split('|')
         job[3] = new_status
-        self.jobs.__setitem__(id, "|".join(job))
+        self.jobs.__setitem__(id, '|'.join(job))
         self.save_jobs()

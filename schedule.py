@@ -9,7 +9,7 @@ from storage.storage_factory import StorageFactory
 load_dotenv()
 
 TOKEN = os.getenv('TOKEN')
-storage = StorageFactory.get_storage('sqlite')
+storage = StorageFactory.get_storage('s3')
 
 def schedule():
     while True:
