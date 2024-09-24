@@ -295,10 +295,10 @@ async def switch_job(update: Update, context: CallbackContext):
             for ID in IDs:
                 if validate_id(ID):
                     current_status = storage.get_job_status(ID)
-                    new_status = 1 if current_status[0] == 0 else 0
+                    new_status = True if current_status == False else False
 
                     # Update the 'status' column for a specific ID
-                    storage.switch(new_status, ID)
+                    storage.switch_job(new_status, ID)
                 await update.message.reply_text(f"Đổi trạng thái lịch số {ID} thành công")
             context.user_data.clear()
     else:
