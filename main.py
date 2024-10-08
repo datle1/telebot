@@ -75,7 +75,7 @@ def remove(user_name_list):
 async def remove_member(update, context):
     username = update.message.from_user.username
     if is_owner(username):
-        user_name_list = update.message.text
+        user_name_list = update.message.text.split(',')
         if len(user_name_list) > 0:    
             remove(user_name_list)
             await update.message.reply_text(f'Xóa người dùng thành công')
